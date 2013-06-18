@@ -9,16 +9,24 @@
 #  * avrdude
 #
 # 1. Install dependencies listed above
-# 2. Make sure the variables ARDUINO_PATH, BOARD, and SERIAL_PORT are
-#    configured correctly for your project.
-# 3. Place your source files in the subdirectory 'src'. Don't use file
+# 
+# 2. Place your source files in the subdirectory 'src'. Don't use file
 #    names that already exist in the Arduino sources -- like main.c(pp).
 #    Check (arduino_path)/hardware/arduino/cores/arduino/.
-# 4. List your C source files in the variables C_SRC, and C++ sources
+#    
+# 3. List your C source files in the variables C_SRC, and C++ sources
 #    in CPP_SRC.
+#    
 # 5. Set the PROJECT variable to your project name.
-# 6. Run 'make' to build your project.
-# 7. Run 'make upload' to upload the code to your Arduino.
+# 
+# 6. Make sure the variables ARDUINO_PATH, BOARD, and SERIAL_PORT are
+#    configured correctly for your project. You can also set these
+#    manually when you run make. For example 'make BOARD=nano' or
+#    'make SERIAL_PORT=/dev/ttyACM0'
+#    
+# 7. Run 'make' to build your project.
+# 
+# 8. Run 'make upload' to upload the code to your Arduino.
 #
 
 #########################################
