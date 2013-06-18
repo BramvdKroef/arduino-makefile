@@ -1,3 +1,5 @@
+extern "C" void blink(int);
+
 #include "test.h"
 
 int led = 13;
