@@ -8,22 +8,19 @@
 #  * avr-libc
 #  * avrdude
 #
-# 1. Install dependencies listed above
+# 1. Install dependencies listed above.
 # 
 # 2. Place your source files(.c, .cpp, .pde) in the subdirectory
 #    'src'. 
 #
-# 3. Set the PROJECT variable to your project name.
-# 
-# 4. Make sure the variables ARDUINO_PATH, BOARD, and SERIAL_PORT are
+# 3. Make sure the variables ARDUINO_PATH, BOARD, and SERIAL_PORT are
 #    configured correctly for your project.
 #
 #    You can also set these manually when you run make. For example
 #    'make BOARD=nano' or 'make upload SERIAL_PORT=/dev/ttyACM0'
 #    
-# 5. Run 'make' to build your project.
-# 
-# 6. Run 'make upload' to upload the code to your Arduino.
+# 4. Run 'make upload' to build and upload the code to your Arduino.
+#    Or 'make' to just build your project.
 #
 # Extra:
 # - make boards  gives a list of boards.
@@ -44,18 +41,6 @@ BOARD = uno
 SERIAL_PORT = /dev/ttyUSB0
 
 #########################################
-# Project sources
-#########################################
-
-PROJECT := example
-INC := 
-
-# Directory containing source files
-SRC_DIR = src
-# Directory to place compiled .o files.
-BUILD_DIR = build
-
-#########################################
 # Build tools
 #########################################
 
@@ -73,41 +58,31 @@ SIZE	= avr-size
 # Arduino files
 BOARDS.TXT=$(ARDUINO_PATH)/hardware/arduino/boards.txt
 
-# Set arduino includes
-VARIANT=$(shell grep "^$(BOARD).build.variant" $(BOARDS.TXT) 2> /dev/null | sed 's|.*=\(.*\)|\1|' 2> /dev/null)
-ARDUINO_INC = $(ARDUINO_PATH)/hardware/arduino/cores/arduino
-ARDUINO_VARIANT_INC = $(ARDUINO_PATH)/hardware/arduino/variants/$(VARIANT)
+# Get board specifications
+VARIANT          = $(shell grep "^$(BOARD).build.variant"   $(BOARDS.TXT) 2> /dev/null | sed 's|.*=\(.*\)|\1|')
+MCU              = $(shell grep "^$(BOARD).build.mcu"       $(BOARDS.TXT) 2> /dev/null | sed 's|.*=\(.*\)|\1|')
+F_CPU            = $(shell grep "^$(BOARD).build.f_cpu"     $(BOARDS.TXT) 2> /dev/null | sed 's|.*=\(.*\)|\1|')
+AVRDUDE_PROTOCOL = $(shell grep "^$(BOARD).upload.protocol" $(BOARDS.TXT) 2> /dev/null | sed 's|.*=\(.*\)|\1|')
 
-# Compilation hardware flags
-MCU=$(shell grep "^$(BOARD).build.mcu" $(BOARDS.TXT) 2> /dev/null | sed 's|.*=\(.*\)|\1|')
-F_CPU=$(shell grep "^$(BOARD).build.f_cpu" $(BOARDS.TXT) 2> /dev/null | sed 's|.*=\(.*\)|\1|')
+ARDUINO_INC         = $(ARDUINO_PATH)/hardware/arduino/cores/arduino
+ARDUINO_VARIANT_INC = $(ARDUINO_PATH)/hardware/arduino/variants/$(VARIANT)
 
 CFLAGS_HW := -mmcu=$(MCU) -DF_CPU=$(F_CPU)
 
 # Avrdude hardware flags
 AVRDUDE.CONF = $(ARDUINO_PATH)/hardware/tools/avrdude.conf
-# Grep avrdude protocol
-AVRDUDE_PROTOCOL=$(shell grep "^$(BOARD).upload.protocol" $(BOARDS.TXT) 2> /dev/null | sed 's|.*=\(.*\)|\1|')
 AVRDUDE_HW := -p$(MCU) -c$(AVRDUDE_PROTOCOL) -P$(SERIAL_PORT)
 
 #########################################
-# Compiler variables
+# Project sources
 #########################################
 
-COMPILER_FLAGS = -Wall -Os -funsigned-char -funsigned-bitfields -fpack-struct -fno-exceptions
+# Directory containing source files
+SRC_DIR = src
+# Directory to place compiled .o files.
+BUILD_DIR = build
 
-# Compiler includes
-INC_DIRS := -I $(SRC_DIR)
-INC_DIRS += -I $(ARDUINO_INC)
-INC_DIRS += -I $(ARDUINO_VARIANT_INC)
-
-# Compiler flags
-CFLAGS := $(COMPILER_FLAGS) $(CFLAGS_HW) $(INC_DIRS) 
-CXXFLAGS := $(COMPILER_FLAGS) $(CFLAGS_HW) $(INC_DIRS)
-CFLAGS_ELF := $(CFLAGS_HW) -Wall -Os 
-
-# Project sources
-C_SRC   = $(shell ls $(SRC_DIR)/*.c 2> /dev/null)
+C_SRC   = $(shell ls $(SRC_DIR)/*.c   2> /dev/null)
 CPP_SRC = $(shell ls $(SRC_DIR)/*.cpp 2> /dev/null)
 PDE_SRC = $(shell ls $(SRC_DIR)/*.pde 2> /dev/null)
 
@@ -115,18 +90,41 @@ OBJ := $(addprefix $(BUILD_DIR)/,$(notdir $(C_SRC:.c=.o)))
 OBJ += $(addprefix $(BUILD_DIR)/,$(notdir $(CPP_SRC:.cpp=.o)))
 OBJ += $(addprefix $(BUILD_DIR)/,$(notdir $(PDE_SRC:.pde=.o)))
 
+#########################################
+# Compiler variables
+#########################################
+
+COMPILER_FLAGS = -Wall -Os -funsigned-char -funsigned-bitfields\
+-fpack-struct -fno-exceptions
+
+# Compiler includes
+INC_DIRS := -I $(SRC_DIR)
+INC_DIRS += -I $(ARDUINO_INC)
+INC_DIRS += -I $(ARDUINO_VARIANT_INC)
+
+# Compiler flags
+CFLAGS   := $(COMPILER_FLAGS) $(CFLAGS_HW) $(INC_DIRS) 
+CXXFLAGS := $(COMPILER_FLAGS) $(CFLAGS_HW) $(INC_DIRS)
+LDFLAGS  := $(CFLAGS_HW) -Wall -Os 
+
 LIBARDUINO_DIR=libarduino
 LIBARDUINO=$(LIBARDUINO_DIR)/libarduino.a
 export ARDUINO_INC
 export INC_DIRS
 export CFLAGS
 export CXXFLAGS
+
+BINARY = binary
+
 ########################################
 # Rules
 ########################################
 
 .PHONY: all
-all: requirements info $(PROJECT).hex
+all: requirements info $(BINARY).hex
+
+$(LIBARDUINO):
+	$(MAKE) -C $(LIBARDUINO_DIR)
 
 # List boards
 .PHONY: boards
@@ -144,16 +142,56 @@ info:
 	@echo "-----------------------------------------"
 
 .PHONY: size
-size: $(PROJECT).elf
+size: $(BINARY).elf
 	$(SIZE) $<
 
 .PHONY: clean
 clean: 
-	@$(RM) -v $(PROJECT).elf
-	@$(RM) -v $(PROJECT).hex
+	@$(RM) -v $(BINARY).elf
+	@$(RM) -v $(BINARY).hex
 	@$(RM) -v $(BUILD_DIR)/*.o
 	@rmdir -v $(BUILD_DIR)
 
+########################################
+# Project rules
+########################################
+$(BUILD_DIR):
+	mkdir $(BUILD_DIR)
+
+$(BINARY).hex: $(BINARY).elf
+	$(STRIP) -s $(BINARY).elf
+	$(OBJCOPY) -O ihex -R .eeprom $(BINARY).elf $(BINARY).hex
+
+$(BINARY).elf: $(BUILD_DIR) $(LIBARDUINO) $(OBJ)
+	$(CXX) $(LDFLAGS) $(OBJ) -o $(BINARY).elf \
+	-L$(LIBARDUINO_DIR) -larduino
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	$(COMPILE.c) $(OUTPUT_OPTION) $<
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
+
+# Convert pde files to cpp files.
+# Make automatically figures out it needs to convert .pde to .cpp to
+# create the .o file.
+$(BUILD_DIR)/%.cpp: $(SRC_DIR)/%.pde
+	echo '#include <Arduino.h>' > $@
+	cat $< >> $@
+	echo 'extern "C" void __cxa_pure_virtual() { while(1); }' >> $@
+
+.PHONY: upload
+upload: $(BINARY).hex
+	stty -F $(SERIAL_PORT) hupcl
+	$(AVRDUDE) -C $(AVRDUDE.CONF) $(AVRDUDE_HW) -D -Uflash:w:$(BINARY).hex:i
+
+.PHONY: monitor
+monitor:
+	cat $(SERIAL_PORT)
+
+########################################
+# Requirements check
+########################################
 # Check if the arduino sdk files exist.
 # Check if boards.txt contains the needed settings. 
 .PHONY: requirements
@@ -188,43 +226,3 @@ endif
 ifeq ($(wildcard $(AVRDUDE.CONF)),)
 	$(error "Avrdude conf $(AVRDUDE.CONF) not found.")
 endif
-
-$(LIBARDUINO):
-	$(MAKE) -C $(LIBARDUINO_DIR)
-
-########################################
-# Project rules
-########################################
-$(BUILD_DIR):
-	mkdir $(BUILD_DIR)
-
-$(PROJECT).hex: $(PROJECT).elf
-	$(STRIP) -s $(PROJECT).elf
-	$(OBJCOPY) -O ihex -R .eeprom $(PROJECT).elf $(PROJECT).hex
-
-$(PROJECT).elf: $(BUILD_DIR) $(LIBARDUINO) $(OBJ) $(SRC) $(INC)
-	$(CXX) $(CFLAGS_ELF) $(OBJ) -o $(PROJECT).elf \
-	-L$(LIBARDUINO_DIR) -larduino
-
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	$(COMPILE.c) $(OUTPUT_OPTION) $<
-
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
-
-# Convert pde files to cpp files.
-# Make automatically figures out it needs to convert .pde to .cpp to
-# create the .o file.
-$(BUILD_DIR)/%.cpp: $(SRC_DIR)/%.pde
-	echo '#include <Arduino.h>' > $@
-	cat $< >> $@
-	echo 'extern "C" void __cxa_pure_virtual() { while(1); }' >> $@
-
-.PHONY: upload
-upload: $(PROJECT).hex
-	stty -F $(SERIAL_PORT) hupcl
-	$(AVRDUDE) -C $(AVRDUDE.CONF) $(AVRDUDE_HW) -D -Uflash:w:$(PROJECT).hex:i
-
-.PHONY: monitor
-monitor:
-	cat $(SERIAL_PORT)
