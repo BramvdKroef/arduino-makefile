@@ -1,9 +1,10 @@
 # Directory to place compiled .o files.
 BUILD_DIR = build
 
-CC      = avr-gcc
-CXX     = avr-g++
-AR      = avr-ar
+# Build tools
+CC  = avr-gcc
+CXX = avr-g++
+AR  = avr-ar
 
 # Arduino sources
 C_SRC   = $(shell ls $(ARDUINO_INC)/*.c  2> /dev/null)
@@ -20,6 +21,7 @@ $(BUILD_DIR):
 libarduino.a: $(BUILD_DIR) $(OBJ)
 	$(AR) rcs libarduino.a $(OBJ)
 
+# Compile arduino sources into BUILD_DIR
 $(BUILD_DIR)/%.o: $(ARDUINO_INC)/%.c
 	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
