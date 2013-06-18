@@ -67,7 +67,7 @@ BOARDS.TXT=$(ARDUINO_PATH)/hardware/arduino/boards.txt
 # Set arduino includes
 VARIANT=$(shell grep "^$(BOARD).build.variant" $(BOARDS.TXT) 2> /dev/null | sed 's|.*=\(.*\)|\1|' 2> /dev/null)
 ARDUINO_INC = $(ARDUINO_PATH)/hardware/arduino/cores/arduino
-ARDUINO_VARIANT_INC = $(ARDUINO_PATH)/hardware/arduino/varints/$(VARIANT)
+ARDUINO_VARIANT_INC = $(ARDUINO_PATH)/hardware/arduino/variants/$(VARIANT)
 
 # Compilation hardware flags
 MCU=$(shell grep "^$(BOARD).build.mcu" $(BOARDS.TXT) 2> /dev/null | sed 's|.*=\(.*\)|\1|')
