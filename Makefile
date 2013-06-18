@@ -55,15 +55,12 @@ SRC_DIR = src
 # Directory to place compiled .o files.
 BUILD_DIR = build
 
-ARDUINO_BUILD_DIR = arduino_build
-
 #########################################
 # Build tools
 #########################################
 
 CC      = avr-gcc
 CXX     = avr-g++
-AR      = avr-ar
 OBJCOPY = avr-objcopy
 STRIP   = avr-strip
 AVRDUDE = avrdude
@@ -107,15 +104,7 @@ INC_DIRS += -I $(ARDUINO_VARIANT_INC)
 # Compiler flags
 CFLAGS := $(COMPILER_FLAGS) $(CFLAGS_HW) $(INC_DIRS) 
 CXXFLAGS := $(COMPILER_FLAGS) $(CFLAGS_HW) $(INC_DIRS)
-CFLAGS_ELF := $(CFLAGS_HW) -Wall -Os -L.
-
-# Arduino sources
-ARDUINO_C_SRC   = $(shell ls $(ARDUINO_INC)/*.c  2> /dev/null)
-ARDUINO_CPP_SRC = $(shell ls $(ARDUINO_INC)/*.cpp  2> /dev/null)
-ARDUINO_OBJ := $(addprefix $(ARDUINO_BUILD_DIR)/,\
-	$(notdir $(ARDUINO_C_SRC:.c=.o))) 
-ARDUINO_OBJ += $(addprefix $(ARDUINO_BUILD_DIR)/,\
-	$(notdir $(ARDUINO_CPP_SRC:.cpp=.o)))
+CFLAGS_ELF := $(CFLAGS_HW) -Wall -Os 
 
 # Project sources
 C_SRC   = $(shell ls $(SRC_DIR)/*.c 2> /dev/null)
@@ -126,6 +115,12 @@ OBJ := $(addprefix $(BUILD_DIR)/,$(notdir $(C_SRC:.c=.o)))
 OBJ += $(addprefix $(BUILD_DIR)/,$(notdir $(CPP_SRC:.cpp=.o)))
 OBJ += $(addprefix $(BUILD_DIR)/,$(notdir $(PDE_SRC:.pde=.o)))
 
+LIBARDUINO_DIR=libarduino
+LIBARDUINO=$(LIBARDUINO_DIR)/libarduino.a
+export ARDUINO_INC
+export INC_DIRS
+export CFLAGS
+export CXXFLAGS
 ########################################
 # Rules
 ########################################
@@ -153,13 +148,7 @@ size: $(PROJECT).elf
 	$(SIZE) $<
 
 .PHONY: clean
-clean: mostlyclean
-	@$(RM) -v libarduino.a
-	@$(RM) -v $(ARDUINO_BUILD_DIR)/*.o
-	@rmdir -v $(ARDUINO_BUILD_DIR)
-
-.PHONY: mostlyclean
-mostlyclean:
+clean: 
 	@$(RM) -v $(PROJECT).elf
 	@$(RM) -v $(PROJECT).hex
 	@$(RM) -v $(BUILD_DIR)/*.o
@@ -200,20 +189,8 @@ ifeq ($(wildcard $(AVRDUDE.CONF)),)
 	$(error "Avrdude conf $(AVRDUDE.CONF) not found.")
 endif
 
-########################################
-# Libarduino rules
-########################################
-$(ARDUINO_BUILD_DIR):
-	mkdir $(ARDUINO_BUILD_DIR)
-
-libarduino.a: $(ARDUINO_BUILD_DIR) $(ARDUINO_OBJ)
-	$(AR) rcs libarduino.a $(ARDUINO_OBJ)
-
-$(ARDUINO_BUILD_DIR)/%.o: $(ARDUINO_INC)/%.c
-	$(COMPILE.c) $(OUTPUT_OPTION) $<
-
-$(ARDUINO_BUILD_DIR)/%.o: $(ARDUINO_INC)/%.cpp
-	$(COMPILE.cpp) $(OUTPUT_OPTION) $<
+$(LIBARDUINO):
+	$(MAKE) -C $(LIBARDUINO_DIR)
 
 ########################################
 # Project rules
@@ -225,8 +202,9 @@ $(PROJECT).hex: $(PROJECT).elf
 	$(STRIP) -s $(PROJECT).elf
 	$(OBJCOPY) -O ihex -R .eeprom $(PROJECT).elf $(PROJECT).hex
 
-$(PROJECT).elf: $(BUILD_DIR) libarduino.a $(OBJ) $(SRC) $(INC)
-	$(CXX) $(CFLAGS_ELF) $(OBJ) -o $(PROJECT).elf -larduino
+$(PROJECT).elf: $(BUILD_DIR) $(LIBARDUINO) $(OBJ) $(SRC) $(INC)
+	$(CXX) $(CFLAGS_ELF) $(OBJ) -o $(PROJECT).elf \
+	-L$(LIBARDUINO_DIR) -larduino
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(COMPILE.c) $(OUTPUT_OPTION) $<
