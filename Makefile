@@ -14,20 +14,29 @@
 #    names that already exist in the Arduino sources -- like main.c(pp).
 #    Check (arduino_path)/hardware/arduino/cores/arduino/.
 #    
-# 3. List your C source files in the variables C_SRC, and C++ sources
-#    in CPP_SRC.
+# 2a. Add '#include <Arduino.h>' to the top of your source files.
+#
+# 2b. Add 'extern "C" void __cxa_pure_virtual() { while(1); }' to the
+#     bottom of one of your source files. This has to be a .cpp file.
 #    
-# 5. Set the PROJECT variable to your project name.
+# 3. List your C source files in the variable C_SRC, and C++ sources
+#    in CPP_SRC below.
+#
+# 4. Set the PROJECT variable to your project name.
 # 
-# 6. Make sure the variables ARDUINO_PATH, BOARD, and SERIAL_PORT are
+# 5. Make sure the variables ARDUINO_PATH, BOARD, and SERIAL_PORT are
 #    configured correctly for your project. You can also set these
 #    manually when you run make. For example 'make BOARD=nano' or
-#    'make SERIAL_PORT=/dev/ttyACM0'
+#    'make upload SERIAL_PORT=/dev/ttyACM0'
 #    
-# 7. Run 'make' to build your project.
+# 6. Run 'make' to build your project.
 # 
-# 8. Run 'make upload' to upload the code to your Arduino.
+# 7. Run 'make upload' to upload the code to your Arduino.
 #
+# Extra:
+# - make boards  gives a list of boards.
+# - make info    outputs the values of the settings.
+# - make size    gives the size of the compiled binary.
 
 #########################################
 # Configuration
@@ -42,15 +51,6 @@ BOARD = uno
 # Serial port for uploading.
 SERIAL_PORT = /dev/ttyUSB0
 
-# Build tools
-CC      = avr-gcc
-CXX     = avr-g++
-AR      = avr-ar
-OBJCOPY = avr-objcopy
-STRIP   = avr-strip
-AVRDUDE = avrdude
-SIZE	= avr-size
-
 #########################################
 # Project sources
 #########################################
@@ -64,6 +64,18 @@ INC :=
 SRC_DIR = src
 # Directory to place compiled .o files.
 BUILD_DIR = build
+
+#########################################
+# Build tools
+#########################################
+
+CC      = avr-gcc
+CXX     = avr-g++
+AR      = avr-ar
+OBJCOPY = avr-objcopy
+STRIP   = avr-strip
+AVRDUDE = avrdude
+SIZE	= avr-size
 
 #########################################
 # Hardware variables
@@ -124,7 +136,8 @@ all: requirements info $(PROJECT).hex
 # List boards
 .PHONY: boards
 boards:
-	grep -o "^[^.#]\+" $(BOARDS.TXT) | uniq
+	@grep -o "^[^.#]\+.name=.\+" $(BOARDS.TXT) | \
+sed 's|\(.*\).name=\(.*\)|\1 (\2)|g'
 
 $(BUILD_DIR):
 	mkdir $(BUILD_DIR)
